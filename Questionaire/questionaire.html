@@ -1,0 +1,162 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stages Of Change Questionnaire</title>
+  <style>
+    body {font-family: Arial, sans-serif; background: #f5f5f5; margin:0; padding:0;}
+    header, footer {background:#4CAF50; color:#fff; text-align:center; padding:15px;}
+    .container {max-width: 800px; margin: 30px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1);}
+    h2 {color:#333; text-align:center;}
+    h3 {margin-top:20px; color:#4CAF50;}
+    label {display:block; margin:10px 0 5px; font-weight:bold;}
+    .scale label {font-weight:normal; display:inline-block; margin-right:10px;}
+    button {margin-top:20px; padding:12px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer;}
+    button:hover {background:#45a049;}
+    .result {margin-top:20px; padding:15px; background:#eef; border-radius:5px;}
+    .saved {margin-top:20px;}
+  </style>
+</head>
+<body><header>
+  <h1>Stages Of Change Questionnaire Online Form</h1>
+</header> <div id="auth" class="auth-container">
+  <h2>Please answer all questions (1 = Strongly Disagree, 5 = Strongly Agree)</h2>
+  <form id="questionnaireForm"></form>
+  <div id="result" class="result"></div>
+  <div class="saved">
+    <button onclick="viewSaved()">View Saved</button>
+    <button onclick="exportCSV()">Export Saved as CSV</button>
+    <button onclick="clearSaved()">Clear All</button>
+    <div id="savedData"></div>
+  </div>
+</div><footer>
+  <p>&copy; 2025 All Rights Reserved | Powerd By DetectiveTech </p>
+</footer><script>
+const sections = {
+  "Precontemplation": [
+    "As far as I’m concerned, I don’t have any problems that need changing.",
+    "I guess I have faults, but there’s nothing I really need to change.",
+    "I don’t think I need to change anything.",
+    "There’s nothing seriously wrong in my life that needs fixing."
+  ],
+  "Contemplation": [
+    "I have a problem and I really think I should work on it.",
+    "I’m beginning to see that my problems are real.",
+    "I’ve been thinking that I might want to change something in my life.",
+    "I’m starting to think about how to improve myself."
+  ],
+  "Preparation": [
+    "I plan to take action in the next month.",
+    "I’ve been preparing to change my behavior.",
+    "I’m setting goals to make changes soon.",
+    "I have a clear plan to improve myself."
+  ],
+  "Action": [
+    "I am actively working on changing my behavior.",
+    "I am doing something to improve my problems.",
+    "I am taking steps every day to change.",
+    "I’ve made specific changes in my lifestyle."
+  ],
+  "Maintenance": [
+    "I have maintained my behavior change for more than 6 months.",
+    "I avoid situations that might trigger old habits.",
+    "I feel confident I can keep my changes going.",
+    "I work hard to prevent relapse."
+  ]
+};
+
+const form = document.getElementById('questionnaireForm');
+let qNum = 1;
+for (let stage in sections) {
+  let h3 = document.createElement('h3');
+  h3.textContent = stage;
+  form.appendChild(h3);
+
+  sections[stage].forEach(q => {
+    let div = document.createElement('div');
+    let label = document.createElement('label');
+    label.textContent = q;
+    div.appendChild(label);
+    let scaleDiv = document.createElement('div');
+    scaleDiv.classList.add('scale');
+    for (let i = 1; i <= 5; i++) {
+      let input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'q' + qNum;
+      input.value = i;
+      input.required = true;
+      scaleDiv.appendChild(input);
+      let l = document.createElement('label');
+      l.textContent = i;
+      scaleDiv.appendChild(l);
+    }
+    div.appendChild(scaleDiv);
+    form.appendChild(div);
+    qNum++;
+  });
+}
+
+let submitBtn = document.createElement('button');
+submitBtn.type = 'submit';
+submitBtn.textContent = 'Submit';
+form.appendChild(submitBtn);
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+  let scores = {};
+  let i = 1;
+  for (let stage in sections) {
+    scores[stage] = 0;
+    sections[stage].forEach(() => {
+      scores[stage] += parseInt(document.querySelector('input[name=q'+i+']:checked').value);
+      i++;
+    });
+  }
+
+  let highestStage = Object.keys(scores).reduce((a,b) => scores[a] > scores[b] ? a : b);
+
+  const result = document.getElementById('result');
+  result.innerHTML = `<h3>Your Current Stage: ${highestStage}</h3>
+    <p>Scores: ${JSON.stringify(scores)}</p>
+    <p><strong>Interpretation:</strong> You are likely in the <em>${highestStage}</em> stage of change.</p>`;
+
+  saveResponse(scores, highestStage);
+  form.reset();
+});
+
+function saveResponse(scores, stage) {
+  let responses = JSON.parse(localStorage.getItem('responses')) || [];
+  responses.push({date: new Date().toLocaleString(), scores, stage});
+  localStorage.setItem('responses', JSON.stringify(responses));
+}
+
+function viewSaved() {
+  let saved = JSON.parse(localStorage.getItem('responses')) || [];
+  let div = document.getElementById('savedData');
+  div.innerHTML = '<h3>Saved Responses</h3>';
+  saved.forEach((r,i) => {
+    div.innerHTML += `<p>${i+1}. ${r.date} – Stage: ${r.stage} – Scores: ${JSON.stringify(r.scores)}</p>`;
+  });
+}
+
+function exportCSV() {
+  let saved = JSON.parse(localStorage.getItem('responses')) || [];
+  if (!saved.length) {alert('No data to export'); return;}
+  let csv = 'Date,Stage,Precontemplation,Contemplation,Preparation,Action,Maintenance\n';
+  saved.forEach(r => {
+    csv += `${r.date},${r.stage},${r.scores.Precontemplation},${r.scores.Contemplation},${r.scores.Preparation},${r.scores.Action},${r.scores.Maintenance}\n`;
+  });
+  let blob = new Blob([csv], {type:'text/csv'});
+  let a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'responses.csv';
+  a.click();
+}
+
+function clearSaved() {
+  localStorage.removeItem('responses');
+  document.getElementById('savedData').innerHTML = '';
+  alert('All saved data cleared');
+}
+</script></body>
+</html>
